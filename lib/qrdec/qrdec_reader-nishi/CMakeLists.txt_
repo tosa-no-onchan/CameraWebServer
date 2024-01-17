@@ -1,0 +1,52 @@
+# CMakeのバージョンを設定
+cmake_minimum_required(VERSION 3.13)
+
+# プロジェクト名と使用する言語を設定
+# c c++ 混在の場合は、言語を指定しない事
+project(qrdec_reader)
+#project(qrdec_reader CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_MODULE_PATH} )
+
+#find_package( ImageMagick REQUIRED )
+find_package( OpenCV REQUIRED )
+
+# gcc -Wall オプションを指定する
+#set(CMAKE_CXX_FLAGS "-Wall")
+
+# GDB option
+#set(CMAKE_CXX_FLAGS "-g3")
+
+# https://stackoverflow.com/questions/42482494/undefined-reference-to-asan-init-v4-when-compiling
+# if you take memory lealk check option
+#set(CMAKE_CXX_FLAGS "-fsanitize=address")
+#set(CMAKE_CFLAGS "-fsanitize=address")
+#set(CMAKE_LDFLAGS "-fsanitize=address")
+##set(CMAKE_LDFLAGS "-static-libasan")   <--- not need
+
+#include_directories([AFTER|BEFORE] [SYSTEM] dir1 [dir2 ...])
+include_directories(/home/nishi/Documents/VisualStudio-CPP/qrdec/src)
+
+# Where is libqrdec.a ?
+# /home/nishi/Documents/VisualStudio-CPP/qrdec/build/libqrdec.a
+link_directories(/home/nishi/Documents/VisualStudio-CPP/qrdec/build)
+
+
+#add_library(greetings STATIC hello.cpp good_morning.cpp)
+#add_library(greetings SHARED hello.cpp good_morning.cpp)
+
+#add_library(my_lib STATIC
+#    /home/nishi/Documents/VisualStudio-CPP/qrdec/src/binarize.c
+#)
+
+# reader という実行ファイルを reader.cc から作成
+add_executable(reader reader.cc
+    #/home/nishi/Documents/VisualStudio-CPP/qrdec/src/binarize.c
+)
+
+target_link_libraries( reader
+    libqrdec.a
+    ${OpenCV_LIBS}
+    # my_lib
+)

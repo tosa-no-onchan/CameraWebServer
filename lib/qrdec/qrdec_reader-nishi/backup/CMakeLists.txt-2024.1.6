@@ -1,0 +1,49 @@
+# CMakeのバージョンを設定
+cmake_minimum_required(VERSION 3.13)
+# プロジェクト名と使用する言語を設定
+project(qrdec_reader CXX)
+#project(qrdec_reader C)
+
+set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_MODULE_PATH} )
+
+
+#find_package( ImageMagick REQUIRED )
+find_package( OpenCV REQUIRED )
+
+
+# gcc -Wall オプションを指定する
+#set(CMAKE_CXX_FLAGS "-Wall")
+
+# GDB option
+#set(CMAKE_CXX_FLAGS "-g3")
+
+# https://stackoverflow.com/questions/42482494/undefined-reference-to-asan-init-v4-when-compiling
+set(CMAKE_CXX_FLAGS "-fsanitize=address")
+set(CMAKE_CFLAGS "-fsanitize=address")
+set(CMAKE_LDFLAGS "-static-libasan")
+
+#include_directories([AFTER|BEFORE] [SYSTEM] dir1 [dir2 ...])
+#include_directories(/home/nishi/Documents/VisualStudio-CPP/zbar/include)
+include_directories(/home/nishi/Documents/VisualStudio-CPP/qrdec/reader-nishi/include)
+
+
+#link_directories(/home/nishi/Documents/VisualStudio-CPP/zbar/zbar)
+#link_directories(/home/nishi/Documents/VisualStudio-CPP/qrdec/build)
+#link_directories(/home/nishi/Documents/VisualStudio-CPP/qrdec/build/src)
+
+# 下記がいる
+# image.c image.o
+
+# a.outという実行ファイルをmain.cppとhello.cppから作成
+add_executable(reader reader.cc
+    /home/nishi/Documents/VisualStudio-CPP/qrdec/src/binarize.c
+)
+
+#/usr/local/lib/libzbar.so
+#libqrdec.a
+
+#target_link_libraries( qrdec_reader ${ImageMagick_LIBS} )
+target_link_libraries( reader ${OpenCV_LIBS}
+    /home/nishi/Documents/VisualStudio-CPP/qrdec/build/libqrdec.a
+)
+

@@ -1,0 +1,84 @@
+https://qiita.com/shohirose/items/45fb49c6b429e8b204ac
+
+
+https://gist.github.com/UnaNancyOwen/47159d73b480f16b846a
+
+https://www.insilico.jp/blog/2022/12/19/cmake01/
+
+検索できるライブラリのリストは以下のコマンド得られます。
+
+$ cmake --help-module-list  | grep -e '^Find' | grep Magic
+
+FindImageMagick
+
+
+https://stackoverflow.com/questions/14077611/how-do-i-tell-cmake-to-link-in-a-static-library-in-the-source-directory
+
+add_executable(main main.cpp)
+target_link_libraries(main ${CMAKE_SOURCE_DIR}/libbingitup.a)
+
+
+
+
+
+1. C++ と C の混在ビルド
+
+https://qiita.com/nomunomu0504/items/722a2771fef7d8038ceb
+
+
+2. リンクエラー
+
+[ 50%] Building CXX object CMakeFiles/reader.dir/reader.cc.o
+[100%] Linking CXX executable reader
+/usr/bin/ld: /home/nishi/Documents/VisualStudio-CPP/qrdec/build/libqrdec.a(binarize.o): in function `qr_binarize':
+/home/nishi/Documents/VisualStudio-CPP/qrdec/src/binarize.c:552: undefined reference to `__asan_report_load1'
+
+
+Ans 1.
+https://github.com/fontforge/fontforge/issues/1930
+
+
+What if you try -Wl,-fsanitize=address for LDFLAGS?
+
+Ans 2.
+https://stackoverflow.com/questions/42482494/undefined-reference-to-asan-init-v4-when-compiling
+
+
+You should be using the compile flag -fsanitize=address: https://github.com/google/sanitizers/wiki/AddressSanitizer
+
+The only supported approach is to use -fsanitize=address both in CFLAGS/CXXFLAGS and LDFLAGS 
+
+Adding -static-libasan to linker flags will solves this problem.
+
+
+qrde/Makefile に
+debug 時に、memory leak check option が入っている所為。
+debug: CFLAGS += -g -O0 -fsanitize=address -fno-omit-frame-pointer
+debug: LDFLAGS += -g -fsanitize=address
+
+i) そのままを使う場合、
+じぶんの CMakeFiles.txt に追加する。
+
+set(CMAKE_CXX_FLAGS "-fsanitize=address")
+set(CMAKE_CFLAGS "-fsanitize=address")
+set(CMAKE_LDFLAGS "-fsanitize=address")
+#set(CMAKE_LDFLAGS "-static-libasan")  <-- こちらは、不要
+
+ii) qrde/Makefile で、prouction でビルドすれば、不要。
+#all: debug
+all: production
+
+
+3. 実行
+
+$ cd reader-nishi/build
+
+./reader /home/nishi/Documents/VisualStudio-CPP/zbar/examples/qr-code.png
+
+4. GDB
+
+gdb --args reader /home/nishi/Documents/VisualStudio-CPP/zbar/examples/qr-code.png
+
+
+5. vscode のインクルードパス
+https://qiita.com/sage-git/items/ffe463c0de05344d721b
