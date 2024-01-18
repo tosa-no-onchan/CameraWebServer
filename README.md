@@ -27,6 +27,8 @@ and set.
 Resoution: QVGA(320x240)  
 pixformat: PIXFORMAT_GRAYSCALE  
 
+QR Code decode results apper on ESP-EYE Serial  
+payload: https://www.msn.com/  
 
 You can change pixel_format.  
 Stopt Stream  
