@@ -22,4 +22,19 @@ connect to ESP-EYE Serial
 check ip-address  
 Browse http://ip-address  
 
-check QR Detect  
+check QR Detection (On Left Navi)  
+and set.    
+Resoution: QVGA(320x240)  
+pixformat: PIXFORMAT_GRAYSCALE  
+
+
+You can change pixel_format.  
+Stopt Stream  
+http://camera-webserver-ip/control?var=pixformat&val=3|4  
+  
+3:PIXFORMAT_GRAYSCALE  
+4:PIXFORMAT_JPEG  
+  
+Strat Stream  
+
+
