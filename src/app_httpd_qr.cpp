@@ -31,6 +31,11 @@
 #define QR_DETECT
 //#define USE_QUIRC
 
+// add by nishi
+// https://github.com/espressif/esp-idf/blob/v5.1.2/examples/peripherals/ledc/ledc_basic/main/ledc_basic_example_main.c
+#include "driver/ledc.h"
+#define LEDC_TIMER              LEDC_TIMER_0
+
 #if !defined(USE_QUIRC)
   # if defined(__cplusplus)
   extern "C" {
@@ -88,6 +93,10 @@ static int8_t detection_enabled = 0;
 static int8_t recognition_enabled = 0;
 static int8_t is_enrolling = 0;
 //static face_id_list id_list = {0};
+
+// add by nishi
+extern camera_config_t config;
+
 
 static ra_filter_t * ra_filter_init(ra_filter_t * filter, size_t sample_size){
     memset(filter, 0, sizeof(ra_filter_t));
@@ -297,7 +306,7 @@ static esp_err_t capture_handler(httpd_req_t *req){
     bool detected = false;
     int face_id = 0;
 
-    if(detection_enabled){
+    if(detection_enabled && fb->format == PIXFORMAT_GRAYSCALE){
         //Serial.println("capture_handler() : #10");
         uint8_t *image = NULL;
 
@@ -528,7 +537,7 @@ static esp_err_t stream_handler(httpd_req_t *req){
             //Serial.printf("fb->width %d:", fb->width);
             //Serial.printf(" ,fb->height %d:\n", fb->height);
 
-            if(detection_enabled){
+            if(detection_enabled && fb->format == PIXFORMAT_GRAYSCALE){
                 image=(uint8_t *)malloc(fb->width * fb->height);
 
                 memcpy(image, fb->buf, fb->len);
@@ -623,20 +632,10 @@ static esp_err_t stream_handler(httpd_req_t *req){
             }
 
 
-            //bmp画像をJPEGにエンコード
-            //if(fmt2jpg(bmp_buf, bmp_buf_size, width, height, (pixformat_t)PIXFORMAT_RGB888, quality, &jpg_buf, &jpg_buf_size)){
-            //    Serial.println("fmt2jpg encord OK!!!");
-            //    Serial.printf("jpeg size = %d\r\n", jpg_buf_size);
-            //}
-
             //if(!detection_enabled || fb->width > 400){
             if(1){
                 if(fb->format != PIXFORMAT_JPEG){
-
                     bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-                    // test by nishi
-                    //bool jpeg_converted = fmt2jpg(fb->buf, fb->len, fb->width, fb->height, (pixformat_t)PIXFORMAT_RGB888, 80, &_jpg_buf, &_jpg_buf_len);
-
                     esp_camera_fb_return(fb);
                     fb = NULL;
                     if(!jpeg_converted){
@@ -735,7 +734,7 @@ static esp_err_t stream_handler(httpd_req_t *req){
         frame_time /= 1000;
         uint32_t avg_frame_time = ra_filter_run(&ra_filter, frame_time);
         l_cnt++;
-        if(l_cnt > 10){
+        if(l_cnt > 20){
             Serial.printf("MJPG: %uB %ums (%.1ffps), AVG: %ums (%.1ffps), %u+%u+%u+%u=%u %s%d\n",
                 (uint32_t)(_jpg_buf_len),
                 (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time,
@@ -751,11 +750,48 @@ static esp_err_t stream_handler(httpd_req_t *req){
     return res;
 }
 
+static int esp_camera_reset(){
+    int rc=0;
+    esp_err_t err;
+    sensor_t * s = esp_camera_sensor_get();
+
+    //p+=sprintf(p, "\"vflip\":%u,", s->status.vflip);
+    //p+=sprintf(p, "\"hmirror\":%u,", s->status.hmirror);
+    uint8_t vflip = s->status.vflip;
+    uint8_t hmirror = s->status.hmirror;
+
+    //else if(!strcmp(variable, "hmirror")) res = s->set_hmirror(s, val);
+    //else if(!strcmp(variable, "vflip")) res = s->set_vflip(s, val);
+
+    err=esp_camera_deinit();
+    if (err != ESP_OK) {
+        Serial.printf("Camera deinit failed with error 0x%x", err);
+        rc = -1;
+    }
+    else{
+        delay(500);
+        err = esp_camera_init(&config);
+        if (err != ESP_OK) {
+            Serial.printf("Camera init failed with error 0x%x", err);
+            rc = -1;
+        }
+        else{
+            s = esp_camera_sensor_get();
+            if(hmirror != s->status.hmirror)
+                rc = s->set_hmirror(s, hmirror);
+            if(vflip != s->status.vflip)
+                rc = s->set_vflip(s, vflip);
+        }
+    }
+    return rc;
+}
+
 static esp_err_t cmd_handler(httpd_req_t *req){
     char*  buf;
     size_t buf_len;
     char variable[32] = {0,};
     char value[32] = {0,};
+
 
     buf_len = httpd_req_get_url_query_len(req) + 1;
     if (buf_len > 1) {
@@ -788,12 +824,8 @@ static esp_err_t cmd_handler(httpd_req_t *req){
     int res = 0;
 
     if(!strcmp(variable, "framesize")) {
-        #if !defined(QR_DETECT)
-            if(s->pixformat == PIXFORMAT_JPEG)
-                res = s->set_framesize(s, (framesize_t)val);
-        #else
-            res = s->set_framesize(s, (framesize_t)val);
-        #endif
+        config.frame_size = (framesize_t)val;
+        res = esp_camera_reset();
     }
     else if(!strcmp(variable, "quality")) res = s->set_quality(s, val);
     else if(!strcmp(variable, "contrast")) res = s->set_contrast(s, val);
@@ -830,6 +862,23 @@ static esp_err_t cmd_handler(httpd_req_t *req){
         if(recognition_enabled){
             detection_enabled = val;
         }
+    }
+    // add by nishi
+    // /control?var=xclk&val=10000000
+    else if(!strcmp(variable, "xclk")){
+        //res = s->set_xclk(s,LEDC_TIMER, val);
+        Serial.printf("set xclk=%d", val);
+        config.xclk_freq_hz = val;
+        res=esp_camera_reset();
+    }
+    // /control?var=pixformat&val=3|4
+    // 3:PIXFORMAT_GRAYSCALE
+    // 4:PIXFORMAT_JPEG
+    else if(!strcmp(variable, "pixformat") && (val==3 || val==4)){
+        Serial.printf("set pixformat=%d", val);
+        //res = s->set_pixformat(s, (pixformat_t)val);
+        config.pixel_format = (pixformat_t)val;
+        res=esp_camera_reset();
     }
     else {
         res = -1;

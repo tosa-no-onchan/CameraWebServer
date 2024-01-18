@@ -19,17 +19,19 @@
 
 #include "camera_pins.h"
 
-const char* ssid = "Your-ssid";
+const char* ssid = "your-ssid";
 const char* password = "password";
 
 void startCameraServer();
+
+camera_config_t config;
 
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
   Serial.println();
 
-  camera_config_t config;
+  //camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM;
@@ -50,12 +52,11 @@ void setup() {
   config.pin_reset = RESET_GPIO_NUM;
   // PIXFORMAT_GRAYSCALE にしたとき、
   // ここが大きと、E (3581) cam_hal: FB-SIZE: 76800 != 1920000 が出る
-  //config.xclk_freq_hz = 20000000; 
+  config.xclk_freq_hz = 20000000; 
   // changed by nishi
-  config.xclk_freq_hz = 10000000;
-  //config.xclk_freq_hz = 12000000;
+  //config.xclk_freq_hz = 10000000;
   //config.pixel_format = PIXFORMAT_JPEG;
-  // test by nishi
+  // changed by nishi
   config.pixel_format = PIXFORMAT_GRAYSCALE;
   
   // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
@@ -63,7 +64,7 @@ void setup() {
   if(psramFound()){
     //config.frame_size = FRAMESIZE_UXGA;
     // changed by nishi
-    //config.frame_size = FRAMESIZE_VGA;
+    //config.frame_size = FRAMESIZE_VGA;    // 640x480
     config.frame_size = FRAMESIZE_QVGA; // 320x240
 
     config.jpeg_quality = 10;
@@ -95,7 +96,7 @@ void setup() {
     s->set_saturation(s, -2); // lower the saturation
   }
   // drop down frame size for higher initial frame rate
-  s->set_framesize(s, FRAMESIZE_QVGA);
+  //s->set_framesize(s, FRAMESIZE_QVGA);
 
 #if defined(CAMERA_MODEL_M5STACK_WIDE) || defined(CAMERA_MODEL_M5STACK_ESP32CAM)
   s->set_vflip(s, 1);
