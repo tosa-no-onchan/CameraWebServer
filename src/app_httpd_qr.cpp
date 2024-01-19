@@ -755,10 +755,14 @@ static int esp_camera_reset(){
     esp_err_t err;
     sensor_t * s = esp_camera_sensor_get();
 
+    framesize_t framesize = s->status.framesize;
+    framesize_t c_framesize = config.frame_size;
+
     //p+=sprintf(p, "\"vflip\":%u,", s->status.vflip);
     //p+=sprintf(p, "\"hmirror\":%u,", s->status.hmirror);
     uint8_t vflip = s->status.vflip;
     uint8_t hmirror = s->status.hmirror;
+    
 
     //else if(!strcmp(variable, "hmirror")) res = s->set_hmirror(s, val);
     //else if(!strcmp(variable, "vflip")) res = s->set_vflip(s, val);
@@ -770,6 +774,10 @@ static int esp_camera_reset(){
     }
     else{
         delay(500);
+        if(config.pixel_format == PIXFORMAT_JPEG){
+            // jpeg だったら、大きなバッファでカメラを初期化する。
+            config.frame_size = FRAMESIZE_UXGA;
+        }
         err = esp_camera_init(&config);
         if (err != ESP_OK) {
             Serial.printf("Camera init failed with error 0x%x", err);
@@ -777,6 +785,11 @@ static int esp_camera_reset(){
         }
         else{
             s = esp_camera_sensor_get();
+            if(config.pixel_format == PIXFORMAT_JPEG){
+                // jpeg だったら、実際の画像サイズに再指定。
+                s->set_framesize(s, framesize);
+                config.frame_size = c_framesize;
+            }
             if(hmirror != s->status.hmirror)
                 rc = s->set_hmirror(s, hmirror);
             if(vflip != s->status.vflip)
@@ -825,7 +838,12 @@ static esp_err_t cmd_handler(httpd_req_t *req){
 
     if(!strcmp(variable, "framesize")) {
         config.frame_size = (framesize_t)val;
-        res = esp_camera_reset();
+        if(s->pixformat == PIXFORMAT_JPEG){
+            res = s->set_framesize(s, (framesize_t)val);
+        }
+        else{
+            res = esp_camera_reset();
+        }
     }
     else if(!strcmp(variable, "quality")) res = s->set_quality(s, val);
     else if(!strcmp(variable, "contrast")) res = s->set_contrast(s, val);

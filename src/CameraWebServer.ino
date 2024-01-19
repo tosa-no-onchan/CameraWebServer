@@ -50,11 +50,7 @@ void setup() {
   config.pin_sscb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
-  // PIXFORMAT_GRAYSCALE にしたとき、
-  // ここが大きと、E (3581) cam_hal: FB-SIZE: 76800 != 1920000 が出る
-  config.xclk_freq_hz = 20000000; 
-  // changed by nishi
-  //config.xclk_freq_hz = 10000000;
+  config.xclk_freq_hz = 20000000;
   //config.pixel_format = PIXFORMAT_JPEG;
   // changed by nishi
   config.pixel_format = PIXFORMAT_GRAYSCALE;
@@ -62,11 +58,13 @@ void setup() {
   // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
   //                      for larger pre-allocated frame buffer.
   if(psramFound()){
-    //config.frame_size = FRAMESIZE_UXGA;
-    // changed by nishi
-    //config.frame_size = FRAMESIZE_VGA;    // 640x480
+    // オリジナルは、ここでは、大きな画像サイズで、カメラを初期化する。
+    //config.frame_size = FRAMESIZE_UXGA; // 1600x1200
+    // しかし、config.pixel_format = PIXFORMAT_GRAYSCALE では、
+    // 初期化したサイズと実際に取り込む画像サイズが一致しないと、下記エラーとなる。
+    // E (152928) cam_hal: FB-SIZE: 384000 != 1920000
+    // PIXFORMAT_GRAYSCALE では、初期化サイズを実際に取り込む画像サイズに合わせる事。
     config.frame_size = FRAMESIZE_QVGA; // 320x240
-
     config.jpeg_quality = 10;
     config.fb_count = 2;
   } 
@@ -96,7 +94,7 @@ void setup() {
     s->set_saturation(s, -2); // lower the saturation
   }
   // drop down frame size for higher initial frame rate
-  //s->set_framesize(s, FRAMESIZE_QVGA);
+  //s->set_framesize(s, FRAMESIZE_QVGA);  // 320x240
 
 #if defined(CAMERA_MODEL_M5STACK_WIDE) || defined(CAMERA_MODEL_M5STACK_ESP32CAM)
   s->set_vflip(s, 1);
